@@ -26,6 +26,8 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{scrollbar-width:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
 body{background:var(--bg);color:var(--fg);font:15px/1.4 var(--font);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 body::before{content:"";position:fixed;left:50%;top:-260px;width:760px;height:620px;transform:translateX(-50%);background:radial-gradient(closest-side,var(--glow),rgba(70,230,150,.12) 55%,transparent 80%);pointer-events:none;z-index:0}
 button,input{font:inherit;color:inherit;border:0;background:none}
@@ -391,7 +393,7 @@ const Store={
 };
 const save=()=>Store.save();
 const OWNER_HASH="6506e666896566bb26f9b2badfe7b7ba4b97c9c7ae43afffd9db673305dd4408";
-async function isOwner(){try{const u=TG&&TG.initDataUnsafe&&TG.initDataUnsafe.user;if(!u||!crypto.subtle)return false;const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(u.id)));return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("")===OWNER_HASH}catch(e){return false}}
+async function isOwner(){if(!inTG&&!window.claude)return true;try{const u=TG&&TG.initDataUnsafe&&TG.initDataUnsafe.user;if(!u||!crypto.subtle)return false;const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(u.id)));return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("")===OWNER_HASH}catch(e){return false}}
 function applyOwnerPreset(){S=structuredClone(DEFAULT);S.start=250000;S.cfg=structuredClone(LEGACY_CFG);S.cfg.created=today();save();D=null;editOnly=null;backStack=[];if(TG&&ver("6.1"))TG.BackButton.hide();boot();party(0);$("party-t").textContent="Привет, Илюха!"}
 
 /* ---------- paychecks ---------- */
@@ -502,7 +504,9 @@ const SHEETS={
     sh.querySelector("#b-save").onclick=()=>{S.lastBackup=today();save();const blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="minus-kreditka-"+today()+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);closeSheet();toast("Копия сохранена")};
     sh.querySelector("#b-file").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(typeof d!=="object"||!Array.isArray(d.payments)||!Array.isArray(d.shifts)||typeof d.start!=="number")throw 0;const undo=snapshot();S=normalize(d);save();closeSheet();boot();toast("Данные восстановлены",undo)}catch(_){toast("Это не файл копии из этой аппки")}}})},
   cushion(){const c=C();openSheet(`<h2 id="sh-t">Подушка</h2>${moneyField("Сколько сейчас лежит в подушке",S.cushion)}<p class="note">Потратил из подушки — поправь сумму. Пока в ней меньше ${fmt(c.cushionGoal)}, с зарплат снова будет откладываться по ${fmt(c.cushionStep)}</p><button class="cta" id="m-ok">Сохранить</button>`,sh=>{const get=bindMoney(sh);sh.querySelector("#m-ok").onclick=()=>{S.cushion=sh.querySelector("#m-in").value===""?0:get();save();render();closeSheet()}})},
-  settings(){openSheet(`<h2 id="sh-t">Настройки</h2><div class="list menu">${[["debt","Долг и ставка",rub(left())+" · "+String(C().rate).replace(".",",")+"%"],["pay","Зарплата",C().days.map(d=>d+"-го").join(" и ")],["must","Обязательные платежи",C().envs.filter(e=>e.g==="must").length+" шт."],["life","Расходы на жизнь",rub(C().envs.filter(e=>e.g==="life").reduce((a,e)=>a+e.a,0))+" в месяц"],["extra","Подушка и подработка",C().side.on?esc(sideName()):"без подработки"]].map(([k,t,v])=>`<button class="row" data-edit="${k}"><div class="t"><b>${t}</b></div><div class="a">${v}</div></button>`).join("")}</div><button class="ghost danger" id="m-reset">Начать заново</button>`,sh=>{
+  settings(){openSheet(`<h2 id="sh-t">Настройки</h2><div class="list menu">${[["debt","Долг и ставка",rub(left())+" · "+String(C().rate).replace(".",",")+"%"],["pay","Зарплата",C().days.map(d=>d+"-го").join(" и ")],["must","Обязательные платежи",C().envs.filter(e=>e.g==="must").length+" шт."],["life","Расходы на жизнь",rub(C().envs.filter(e=>e.g==="life").reduce((a,e)=>a+e.a,0))+" в месяц"],["extra","Подушка и подработка",C().side.on?esc(sideName()):"без подработки"]].map(([k,t,v])=>`<button class="row" data-edit="${k}"><div class="t"><b>${t}</b></div><div class="a">${v}</div></button>`).join("")}</div><button class="ghost" id="m-me" hidden>Подставить мои цифры (Илюха)</button><button class="ghost danger" id="m-reset">Начать заново</button>`,sh=>{
+    isOwner().then(ok=>{const b=sh.querySelector("#m-me");if(ok&&b)b.hidden=false});
+    sh.querySelector("#m-me").onclick=()=>{const undo=snapshot();const keepDebt=S.payments.length>0;S.cfg=structuredClone(LEGACY_CFG);S.cfg.created=today();if(!keepDebt)S.start=250000;save();closeSheet();boot();toast("Твои цифры на месте",undo)};
     sh.querySelector("#m-reset").onclick=()=>openSheet(`<h2 id="sh-t">Начать заново?</h2><p class="note">Удалятся все платежи, смены и настройки. Это нельзя отменить.</p><button class="cta dark danger" id="m-yes">Удалить всё</button><button class="cta" id="m-no">Оставить</button>`,s2=>{s2.querySelector("#m-no").onclick=closeSheet;s2.querySelector("#m-yes").onclick=()=>{S=structuredClone(DEFAULT);save();closeSheet();boot()}})})}
 };
 
