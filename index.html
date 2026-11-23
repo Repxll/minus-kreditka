@@ -390,6 +390,9 @@ const Store={
     if(this.chunks>parts.length){const extra=[];for(let i=parts.length;i<this.chunks;i++)extra.push("s"+i);await this.call("removeItems",extra)}this.chunks=parts.length}
 };
 const save=()=>Store.save();
+const OWNER_HASH="6506e666896566bb26f9b2badfe7b7ba4b97c9c7ae43afffd9db673305dd4408";
+async function isOwner(){try{const u=TG&&TG.initDataUnsafe&&TG.initDataUnsafe.user;if(!u||!crypto.subtle)return false;const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(u.id)));return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("")===OWNER_HASH}catch(e){return false}}
+function applyOwnerPreset(){S=structuredClone(DEFAULT);S.start=250000;S.cfg=structuredClone(LEGACY_CFG);S.cfg.created=today();save();D=null;editOnly=null;backStack=[];if(TG&&ver("6.1"))TG.BackButton.hide();boot();party(0);$("party-t").textContent="Привет, Илюха!"}
 
 /* ---------- paychecks ---------- */
 function paychecks(){const c=C(),out=[],now=today(),f=new Date(c.first+"T12:00"),days=[...c.days].sort((a,b)=>a-b);let y=f.getFullYear(),m=f.getMonth();
@@ -529,7 +532,7 @@ function renderOnb(){
   const nextTxt=editOnly?"Сохранить":"Дальше";
   $("title").textContent=editOnly?"Настройки":"Минус кредитка";
   let h="";
-  if(name==="hello")h=`<div class="hero"><img src="${IMG.wave}" alt=""></div><h2 class="q">Закроем кредитку вместе</h2><p class="sub">Раскладываешь зарплату по конвертам, остаток — в долг. Аппка считает, когда станешь свободен, и радуется каждому платежу.</p><p class="sub">Настройка займёт 2 минуты. Данные видишь только ты${inTG?" — они хранятся в твоём Telegram":""}.</p>${cta("Начать")}`;
+  if(name==="hello")h=`<div class="hero"><img src="${IMG.wave}" alt=""></div><h2 class="q">Закроем кредитку вместе</h2><p class="sub">Раскладываешь зарплату по конвертам, остаток — в долг. Аппка считает, когда станешь свободен, и радуется каждому платежу.</p><p class="sub">Настройка займёт 2 минуты. Данные видишь только ты${inTG?" — они хранятся в твоём Telegram":""}.</p>${cta("Начать")}<button class="ghost" id="o-me" hidden>Я Илюха — подставить мои цифры</button>`;
   if(name==="debt")h=`${dots}<h2 class="q">Сколько сейчас долга по кредитке?</h2><p class="sub">Возьми сумму из приложения банка</p><div class="fld"><span>Долг, ₽</span>${mi("debt",D.debt,"250 000")}</div><div class="fld"><span>Ставка, % годовых</span><input data-k="rate" inputmode="decimal" placeholder="например, 35" value="${D.rate===""?"":String(D.rate).replace(".",",")}"></div><div class="fld"><span>День выписки</span><input data-k="stmt" inputmode="numeric" maxlength="2" value="${D.stmt}"></div><p class="note">Ставку на покупки ищи в тарифе карты. В день выписки банк начисляет проценты — аппка напомнит сверить остаток</p>${cta(nextTxt)}`;
   if(name==="pay")h=`${dots}<h2 class="q">Когда приходит зарплата?</h2><div class="seg"><button data-npay="1" aria-pressed="${D.days.length===1}">Раз в месяц</button><button data-npay="2" aria-pressed="${D.days.length===2}">Два раза</button></div>${D.days.map((s,i)=>`<div class="card"><div class="fld" style="border:0;background:none;padding:0"><span>${D.days.length>1?(i?"Вторая":"Первая")+" выплата, число":"Число месяца"}</span><input data-day="${i}" inputmode="numeric" maxlength="2" value="${s}"></div><div class="fld" style="border:0;background:none;padding:0;border-top:1px solid var(--line);border-radius:0"><span>Сумма на карту, ₽</span>${mi("pay:"+s,D.pay[s],"70 000")}</div></div>`).join("")}${cta(nextTxt)}`;
   if(name==="must")h=`${dots}<h2 class="q">Обязательные платежи</h2><p class="sub">Аренда, кредиты, связь — всё, что платишь каждый месяц${D.days.length>1?". Выбери, с какой зарплаты":""}</p><div class="card">${D.must.map((e,i)=>`<div class="erow${D.days.length>1?" two":""}"><input class="n" data-mn="${i}" value="${esc(e.n)}" placeholder="Название">${mi("must:"+i,e.a,"₽")}${daySel(i,e.day)}<button class="x" data-mdel="${i}" aria-label="Убрать">×</button></div>`).join("")||'<div class="empty">Пока пусто</div>'}<button class="add" id="o-addm">+ Добавить платёж</button></div>${cta(nextTxt)}`;
@@ -540,6 +543,7 @@ function renderOnb(){
   if(name==="done"){const cfg=cfgFromDraft(D),old=S.cfg;S.cfg=cfg;const per=cfg.days.reduce((a,s)=>a+Math.max(0,(cfg.pay[s]||0)-rowsFor(s,{}).reduce((x,e)=>x+e.a,0)),0),over=cfg.days.reduce((a,s)=>a+Math.min(0,(cfg.pay[s]||0)-rowsFor(s,{}).reduce((x,e)=>x+e.a,0)),0),sm=sideMonthly(),pm=per+sm,rows=schedule(D.debt,pm,cfg.rate),last=rows[rows.length-1];S.cfg=old;
     h=`<div class="hero"><img src="${IMG.win}" alt=""></div><h2 class="q">${last?`Свобода к ${MD[last.m.getMonth()]} ${last.m.getFullYear()}`:"Пока не сходится"}</h2><div class="sum"><b>${rub(pm)}</b><span>в месяц будет уходить в кредитку${cfg.side.on?`, из них ~${rub(sm)} с подработки`:""}</span></div>${over<0?`<p class="warn">Расходы больше зарплаты на ${rub(-over)}. Урежь конверты, иначе долг не уменьшится</p>`:""}${last?`<p class="sub">Переплата по процентам ≈ ${rub(rows.reduce((a,r)=>a+r.i,0))}. Чем больше закидываешь, тем меньше отдаёшь банку</p>`:""}${cta("Поехали","o-finish")}`}
   v.innerHTML=h;scrollTo({top:0});
+  if(name==="hello")isOwner().then(ok=>{const b=$("o-me");if(ok&&b)b.hidden=false});
 }
 function onbValidate(){const n=STEPS[step];
   if(n==="debt"){if(!(D.debt>0))return"Введи сумму долга";const r=+String(D.rate).replace(",",".");if(!(r>0&&r<200))return"Введи ставку, например 35";D.rate=r;if(!(D.stmt>=1&&D.stmt<=31))return"День выписки — число от 1 до 31"}
@@ -560,6 +564,7 @@ $("v-onb").addEventListener("change",e=>{if(e.target.id==="o-side"){D.side.on=e.
 $("v-onb").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!D)return;
   if(b.id==="o-next"){const err=onbValidate();if(err)return toast(err);haptic();if(editOnly)return onbCommit();step++;renderOnb();if(step===1&&!C())pushBack(onbBack);return}
   if(b.id==="o-finish")return onbCommit();
+  if(b.id==="o-me")return applyOwnerPreset();
   if(b.dataset.npay){const n=+b.dataset.npay;if(n===1)D.days=[D.days[0]];else if(D.days.length===1)D.days=[D.days[0],D.days[0]<=15?Math.min(31,D.days[0]+15):Math.max(1,D.days[0]-15)].sort((a,b)=>a-b);D.must.forEach(m=>{if(!D.days.includes(m.day))m.day=D.days[0]});renderOnb();return}
   if(b.dataset.mday){const [i,s]=b.dataset.mday.split(":").map(Number);D.must[i].day=s;renderOnb();return}
   if(b.dataset.mdel!==undefined){D.must.splice(+b.dataset.mdel,1);renderOnb();return}
