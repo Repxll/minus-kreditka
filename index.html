@@ -608,6 +608,11 @@ document.addEventListener("click",e=>{
 });
 
 let lastDay=today();
+// Home-screen iOS apps resume a stale page and never revalidate it.
+const BUILD="1795604303";
+function checkUpdate(){if(!location.hostname.endsWith("github.io"))return;fetch("./?u="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\d+)"/);if(m&&m[1]!==BUILD)location.replace("./?v="+m[1])}).catch(()=>{})}
+checkUpdate();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});
 document.addEventListener("visibilitychange",()=>{if(document.hidden||today()===lastDay||!C())return;lastDay=today();pcs=paychecks();pcI=lastPassed();render()});
 
 /* ---------- boot ---------- */
