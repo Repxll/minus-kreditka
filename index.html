@@ -122,7 +122,6 @@ button{cursor:pointer}
 .remind b{display:block;font-weight:700}
 .remind span{display:block;color:var(--muted);font-size:13px}
 .remind i{font-style:normal;font-size:22px}
-.lock{font-size:13px;color:var(--muted);text-align:center;margin:-4px 0}
 .tick:disabled{opacity:.35;cursor:default}
 .tile.btn{text-align:left;width:100%}
 
@@ -310,14 +309,14 @@ body.onb-on .toast{bottom:calc(100px + max(env(safe-area-inset-bottom,0px),var(-
     <div class="amount">
       <button class="cap edit" data-open="salary" style="margin-top:6px"><span>пришло на карту</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button>
       <div class="big" id="p-sal" style="margin-top:6px">0<span>₽</span></div>
-      <div class="acc" id="p-acc"></div><p class="lock" id="p-lock" hidden></p>
+      <div class="acc" id="p-acc"></div>
     </div>
-    <button class="cta dark" data-open="extra">Пришли деньги вне зарплаты</button>
     <div id="p-groups" style="display:flex;flex-direction:column;gap:12px"></div>
     <div class="cc" id="p-cc"></div>
     <div class="advice"><img data-m="crush" alt=""><small>Правила</small><p>Кредитка заморожена. Наличку с неё не снимаем. Минималку платим до даты из выписки.</p></div>
     <div class="label">Как тает долг</div>
     <div class="list sch" id="p-sch"></div>
+    <button class="cta dark" data-open="extra">Пришли деньги вне зарплаты</button>
   </section>
 </div>
 
@@ -465,7 +464,6 @@ function render(){
   $("pc-date").textContent=pd.getDate()+" "+MG[pd.getMonth()]+(pd.getFullYear()!==new Date().getFullYear()?" "+pd.getFullYear():"");
   const st=$("pc-state"),isLast=pcI===lastPassed()&&!fut;st.className=isLast?"now":"";st.textContent=fut?"ещё не пришла":isLast?"последняя зарплата":"прошлая зарплата";
   $("pc-prev").disabled=pcI===0;$("pc-next").disabled=pcI===pcs.length-1;
-  $("p-lock").hidden=!fut;$("p-lock").textContent=fut?`По плану придёт ${pd.getDate()} ${MG[pd.getMonth()]}. Пришла раньше — отмечай`:"";
   $("p-sal").innerHTML=fmt(sal)+"<span>₽</span>";
   const rws=rowsFor(pc.s,ch),G=[["must","Обязательно"],["life","Жизнь"],["cush","Копилка"]];
   const done=rws.filter(e=>ch[e.id]).length+(ch.cc?1:0);
@@ -610,7 +608,7 @@ document.addEventListener("click",e=>{
 
 let lastDay=today();
 // Home-screen iOS apps resume a stale page and never revalidate it.
-const BUILD="1795604534";
+const BUILD="1795604676";
 function checkUpdate(){if(!location.hostname.endsWith("github.io"))return;fetch("./?u="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\d+)"/);if(m&&m[1]!==BUILD)location.replace("./?v="+m[1])}).catch(()=>{})}
 checkUpdate();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});
