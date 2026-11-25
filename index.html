@@ -402,8 +402,9 @@ async function isOwner(){if(!inTG&&!window.claude)return true;try{const u=TG&&TG
 function applyOwnerPreset(){S=structuredClone(DEFAULT);S.start=250000;S.cfg=structuredClone(LEGACY_CFG);S.cfg.created=today();save();D=null;editOnly=null;backStack=[];if(TG&&ver("6.1"))TG.BackButton.hide();boot();party(0);$("party-t").textContent="Привет, Илюха!"}
 
 /* ---------- paychecks ---------- */
-function paychecks(){const c=C(),out=[],now=today(),f=new Date(c.first+"T12:00"),days=[...c.days].sort((a,b)=>a-b);let y=f.getFullYear(),m=f.getMonth();
-  for(let g=0;g<600;g++){for(const s of days){const d=new Date(y,m,Math.min(s,dim(y,m)),12),k=iso(d);if(k<c.first)continue;out.push({d,k,s});if(k>now)return out}if(++m>11){m=0;y++}}return out}
+function paychecks(){const c=C(),out=[],days=[...c.days].sort((a,b)=>a-b),lo=c.first<today()?c.first:today(),end=new Date();end.setMonth(end.getMonth()+3);const f=new Date(lo+"T12:00");f.setMonth(f.getMonth()-1,1);let y=f.getFullYear(),m=f.getMonth();
+  for(let g=0;g<40;g++){for(const s of days){const d=new Date(y,m,Math.min(s,dim(y,m)),12);if(d>end)return trimPcs(out,lo);out.push({d,k:iso(d),s})}if(++m>11){m=0;y++}}return trimPcs(out,lo)}
+const trimPcs=(out,lo)=>{let i=0;out.forEach((p,j)=>{if(p.k<=lo)i=j});return out.slice(i)};
 const slotOf=k=>{const d=new Date(k+"T12:00");return C().days.find(s=>Math.min(s,dim(d.getFullYear(),d.getMonth()))===d.getDate())};
 function salaryOf(k,s){if(S.salary[k])return S.salary[k];const prev=Object.keys(S.salary).filter(x=>/^\d{4}-/.test(x)&&x<k&&slotOf(x)===s).sort().pop();return prev?S.salary[prev]:(C().pay[s]||0)}
 function cushionAmt(ch){const c=C();if(ch&&ch.cushion)return ch.cushionAmt||c.cushionStep;return Math.max(0,Math.min(c.cushionStep,c.cushionGoal-S.cushion))}
@@ -609,7 +610,7 @@ document.addEventListener("click",e=>{
 
 let lastDay=today();
 // Home-screen iOS apps resume a stale page and never revalidate it.
-const BUILD="1795604303";
+const BUILD="1795604534";
 function checkUpdate(){if(!location.hostname.endsWith("github.io"))return;fetch("./?u="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\d+)"/);if(m&&m[1]!==BUILD)location.replace("./?v="+m[1])}).catch(()=>{})}
 checkUpdate();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});
